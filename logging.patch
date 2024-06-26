@@ -1,0 +1,12 @@
+diff --git a/lib/rucio/transfertool/fts3.py b/lib/rucio/transfertool/fts3.py
+index d53e1b5bc..aac5cce1c 100644
+--- a/lib/rucio/transfertool/fts3.py
++++ b/lib/rucio/transfertool/fts3.py
+@@ -326,6 +326,7 @@ def build_job_params(
+     last_hop = transfer_path[-1]
+     first_hop = transfer_path[0]
+ 
++    logger(logging.ERROR, 'Is it tape?: %s %s' % (last_hop.dst.rse.name, last_hop.dst.rse.is_tape()))
+     # Overwriting by default is set to True for non TAPE RSEs.
+     # Tape RSEs can force overwrite by setting the "overwrite" attribute to True.
+     overwrite, overwrite_when_only_on_disk, bring_online_local = True, False, None
