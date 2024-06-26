@@ -1,3 +1,9 @@
+commit 38d0ad56622c86fc9d4658833d985bb8067b036b
+Author: Hugo Gonzalez Labrador <github@hugo.labkode.com>
+Date:   Wed Jun 26 14:09:33 2024 +0200
+
+    add more debug info
+
 diff --git a/lib/rucio/transfertool/fts3.py b/lib/rucio/transfertool/fts3.py
 index d53e1b5bc..200c33d86 100644
 --- a/lib/rucio/transfertool/fts3.py
@@ -25,20 +31,3 @@ index d53e1b5bc..200c33d86 100644
      # Get dest space token
      dest_protocol = last_hop.protocol_factory.protocol(last_hop.dst.rse, last_hop.dst.scheme, last_hop.operation_dest)
      dest_spacetoken = None
-diff --git a/logging.patch b/logging.patch
-index b8dd7b5b8..e69de29bb 100644
---- a/logging.patch
-+++ b/logging.patch
-@@ -1,12 +0,0 @@
--diff --git a/lib/rucio/transfertool/fts3.py b/lib/rucio/transfertool/fts3.py
--index d53e1b5bc..aac5cce1c 100644
----- a/lib/rucio/transfertool/fts3.py
--+++ b/lib/rucio/transfertool/fts3.py
--@@ -326,6 +326,7 @@ def build_job_params(
--     last_hop = transfer_path[-1]
--     first_hop = transfer_path[0]
-- 
--+    logger(logging.ERROR, 'Is it tape?: %s %s' % (last_hop.dst.rse.name, last_hop.dst.rse.is_tape()))
--     # Overwriting by default is set to True for non TAPE RSEs.
--     # Tape RSEs can force overwrite by setting the "overwrite" attribute to True.
--     overwrite, overwrite_when_only_on_disk, bring_online_local = True, False, None
