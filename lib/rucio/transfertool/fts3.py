@@ -346,6 +346,9 @@ def build_job_params(
         if overwrite and overwrite_when_only_on_disk:
             overwrite = False
 
+    logger(logging.ERROR, 'Is it tape?: %s %s overwrite_when_only_on_disk:%s' % (last_hop.dst.rse.name, last_hop.dst.rse.is_tape(), overwrite_when_only_on_disk))
+    logger(logging.ERROR, 'RSE attributes are: %s' % (last_hop.dst.rse.attributes))
+
     # Get dest space token
     dest_protocol = last_hop.protocol_factory.protocol(last_hop.dst.rse, last_hop.dst.scheme, last_hop.operation_dest)
     dest_spacetoken = None
