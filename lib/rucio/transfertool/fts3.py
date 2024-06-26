@@ -337,17 +337,14 @@ def build_job_params(
         # FTS v3.12.12 introduced a new boolean parameter "overwrite_when_only_on_disk" that controls if the file can be overwritten
         # in TAPE enabled RSEs ONLY IF the file is on the disk buffer and not yet commited to tape media.
         # This functionality should reduce the number of stuck files in the disk buffer that are not migrated to tape media (for whatever reason).
-        # Please be aware that FTS does not guarantee an atomic operation from the time it checks for existence of the file on disk and tape and
+        # Please be aware that FTS does not guarantee an atomic operation from the time it checks for existence of the file on disk and tape and 
         # the moment the file is overwritten, so there is a race condition that could overwrite the file on the tape media
-        overwrite = last_hop.rws.attributes.get('overwrite', False)  # honour RSE configuration to force overwrite
+        overwrite = last_hop.rws.attributes.get('overwrite', False) # honour RSE configuration to force overwrite
         overwrite_when_only_on_disk = last_hop.rws.attributes.get('overwrite_when_only_on_disk', False)
-        # setting both flags is incompatible, so we opt in for the safest approach: "overwrite_when_only_on_disk
-        # this is aligned with FTS implementation: see
+        # setting both flags is incompatible, so we opt in for the safest approach: "overwrite_when_only_on_disk"
+        # this is aligned with FTS implementation: see 
         if overwrite and overwrite_when_only_on_disk:
             overwrite = False
-
-    logger(logging.ERROR, 'Is it tape?: %s %s overwrite_when_only_on_disk:%s' % (last_hop.dst.rse.name, last_hop.dst.rse.is_tape(), overwrite_when_only_on_disk))
-    logger(logging.ERROR, 'RSE attributes are: %s' % (last_hop.dst.rse.attributes))
 
     # Get dest space token
     dest_protocol = last_hop.protocol_factory.protocol(last_hop.dst.rse, last_hop.dst.scheme, last_hop.operation_dest)
