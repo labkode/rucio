@@ -2548,7 +2548,7 @@ def list_and_mark_unlocked_replicas(
     :param limit:                    Number of replicas returned.
     :param bytes_:                   The amount of needed bytes.
     :param rse_id:                   The rse_id.
-    :param delay_seconds:            The delay to query replicas in BEING_DELETED state
+    :param delay_seconds:            The delay to query replicas in BEING_DELETED state, default is 10 minutes
     :param only_delete_obsolete      If set to True, will only return the replicas with EPOCH tombstone
     :param session:                  The database session in use.
 
@@ -4480,3 +4480,75 @@ def get_rse_coverage_of_dataset(
             result[rse_id] = total
 
     return result
+
+
+@transactional_session
+def refresh_replicas(rse_id=None, replicas=None, *, session: "Session"):
+    """
+    Updates the updated_at timestamp of the given replicas but don't wait if row is locked.
+
+    :param rse_id: the RSE containing the replicas to refresh.
+    :param replicas: a list with replicas (dictionary with the information of the affected replica).
+    :param session: The database session in use.
+
+    :returns: True, if successful, False otherwise.
+    """
+
+    if not replicas or not rse_id:
+            return True
+    
+    tt_mngr = temp_table_mngr(session=session)
+    scope_name_temp_table = tt_mngr.create_scope_name_table()
+
+    values = [{'scope': replica['scope'].external, 'name': replica['name']} for replica in replicas]
+
+    try:
+        stmt = insert(
+            scope_name_temp_table
+        )
+        session.execute(stmt, values)
+
+        stmt = select(
+            func.count(),
+        ).join_from(
+            scope_name_temp_table,
+            models.RSEFileAssociation,
+            and_(models.RSEFileAssociation.scope == scope_name_temp_table.scope,
+                models.RSEFileAssociation.name == scope_name_temp_table.name,
+                models.RSEFileAssociation.rse_id == rse_id,
+                models.RSEFileAssociation.state == ReplicaState.BEING_DELETED)
+        )
+
+        total_to_refresh = session.execute(stmt).one()
+        if total_to_refresh == 0:
+            # nothing to do
+            return True
+
+        stmt = update(
+            models.RSEFileAssociation
+        ).where(
+            exists(select(1)
+                    .where(
+                        and_(models.RSEFileAssociation.scope == scope_name_temp_table.scope,
+                            models.RSEFileAssociation.name == scope_name_temp_table.name,
+                            models.RSEFileAssociation.rse_id == rse_id)))
+        ).prefix_with(
+                '/*+ INDEX(REPLICAS REPLICAS_PK) */', dialect='oracle'
+        ).where(
+            models.RSEFileAssociation.state == ReplicaState.BEING_DELETED,
+        ).values({
+            models.RSEFileAssociation.updated_at: datetime.utcnow()
+        }).execute_options(
+            synchronize_session=False
+        )
+
+        session.execute(stmt)
+
+        # clean up temporary table
+        stmt = delete(scope_name_temp_table)
+        session.execute(stmt)
+
+    except DatabaseError:
+        return False
+
+    return True
