@@ -3203,7 +3203,10 @@ def get_replica_atime(
     return session.execute(stmt).scalar_one()
 
 @read_session
-def get_replica_updated_at(replica, *, session: "Session"):
+def get_replica_updated_at(
+    replica: dict[str, Any], 
+    *,
+    session: "Session"):
     """
     Get the updated_at timestamp for a replica. Just for testing.
     :param replica: list of dictionary {scope, name, rse_id}
@@ -4522,7 +4525,7 @@ def refresh_replicas(rse_id=None, replicas=None, *, session: "Session"):
     tt_mngr = temp_table_mngr(session=session)
     scope_name_temp_table = tt_mngr.create_scope_name_table()
 
-    values = [{'scope': replica['scope'].external, 'name': replica['name']} for replica in replicas]
+    values = [{'scope': replica['scope'], 'name': replica['name']} for replica in replicas]
 
     try:
         stmt = insert(
