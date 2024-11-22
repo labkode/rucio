@@ -4500,11 +4500,7 @@ def get_RSEcoverage_of_dataset(
 @transactional_session
 def refresh_replicas(
         rse_id: Optional[str] = None, 
-<<<<<<< HEAD
         replicas: Optional['Iterable[dict[str, Any]]'] = None,
-=======
-        replicas: Optional[Iterable[dict[str, Any]]] = None,
->>>>>>> 8bd20ef67 (update typing)
         *, 
         session: "Session"
 ) -> bool:
