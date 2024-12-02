@@ -12,20 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib
-from typing import TYPE_CHECKING, Optional
+# mock schema module that overrides only some values
 
-if TYPE_CHECKING:
-    from collections.abc import Iterable
-    from types import ModuleType
+SCOPE_LENGTH = 50
 
-
-def import_extras(module_list: 'Iterable[str]') -> dict[str, "Optional[ModuleType]"]:
-    out = dict()
-    for mod in module_list:
-        out[mod] = None
-        try:
-            out[mod] = importlib.import_module(mod)
-        except ImportError:
-            pass
-    return out
+SCOPE = {"description": "Scope name",
+         "type": "string",
+         "maxLength": SCOPE_LENGTH,
+         "pattern": "^[a-zA-Z_\\-.0-9]+$"}
