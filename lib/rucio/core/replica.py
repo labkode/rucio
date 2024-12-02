@@ -4572,8 +4572,7 @@ def refresh_replicas(rse_id=None, replicas=None, *, session: "Session"):
 
         # clean up temporary table
         stmt = delete(scope_name_temp_table)
-=======
-    try:
+
         updated_at, none_value = datetime.utcnow(), None
 
         stmt = select(
