@@ -4566,8 +4566,7 @@ def refresh_replicas(
 
         # clean up temporary table
         stmt = delete(scope_name_temp_table)
-=======
-    try:
+
         updated_at, none_value = datetime.utcnow(), None
 
         stmt = select(
