@@ -4571,67 +4571,6 @@ def refresh_replicas(rse_id=None, replicas=None, *, session: "Session"):
 
         # clean up temporary table
         stmt = delete(scope_name_temp_table)
-
-        updated_at, none_value = datetime.utcnow(), None
-
-        stmt = select(
-            models.RSEFileAssociation
-        ).with_hint(
-            models.RSEFileAssociation,
-            'INDEX(REPLICAS REPLICAS_PK)',
-            'oracle'
-        ).where(
-            and_(models.RSEFileAssociation.rse_id == replica['rse_id'],
-                 models.RSEFileAssociation.scope == replica['scope'],
-                 models.RSEFileAssociation.name == replica['name'])
-        ).with_for_update(
-            nowait=True
-        )
-        session.execute(stmt).one()
-
-        stmt = update(
-            models.RSEFileAssociation
-        ).where(
-            and_(models.RSEFileAssociation.rse_id == replica['rse_id'],
-                 models.RSEFileAssociation.scope == replica['scope'],
-                 models.RSEFileAssociation.name == replica['name'])
-        ).prefix_with(
-            '/*+ INDEX(REPLICAS REPLICAS_PK) */', dialect='oracle'
-        ).values({
-            models.RSEFileAssociation.updated_at: updated_at,
-        }).execution_options(
-            synchronize_session=False
-        )
-        session.execute(stmt)
-
-        stmt = select(
-            models.DataIdentifier
-        ).with_hint(
-            models.DataIdentifier,
-            'INDEX(DIDS DIDS_PK)',
-            'oracle'
-        ).where(
-            and_(models.DataIdentifier.scope == replica['scope'],
-                 models.DataIdentifier.name == replica['name'],
-                 models.DataIdentifier.did_type == DIDType.FILE)
-        ).with_for_update(
-            nowait=True
-        )
-        session.execute(stmt).one()
-
-        stmt = update(
-            models.DataIdentifier
-        ).where(
-            and_(models.DataIdentifier.scope == replica['scope'],
-                 models.DataIdentifier.name == replica['name'],
-                 models.DataIdentifier.did_type == DIDType.FILE)
-        ).prefix_with(
-            '/*+ INDEX(DIDS DIDS_PK) */', dialect='oracle'
-        ).values({
-            models.DataIdentifier.updated_at: updated_at
-        }).execution_options(
-            synchronize_session=False
-        )
         session.execute(stmt)
 
     except DatabaseError:
