@@ -142,13 +142,25 @@ def delete_from_storage(heartbeat_handler, hb_payload, replicas, prot, rse_info,
     noaccess_attempts = 0
     pfns_to_bulk_delete = []
 
-    refresh_start_time = time.time()
     trigger_time = 60 * 8  # 8 minutes, we could make it configurable, but will change functions signature.
 
     try:
         prot.connect()
+        refresh_start_time = time.time()
         num_replicas_processed = 0  # counts how many replicas has been already being processed
         for replica in replicas:
+            # Every 8 minutes, if there are still replicas to process,
+            # we bump the updated_at field of the unprocessed replicas to current time,
+            # which will prevent other workers from selecting
+            # the unprocessed replicas for the next 8+ minutes
+            elapsed_time = time.time() - refresh_start_time
+            if elapsed_time > trigger_time:  # 8 minutes have passed
+                to_refresh = replicas[num_replicas_processed + 1]  # only refresh the replicas we have not yet deleted
+                ok = refresh_replicas(rse_id=rse_id, replicas=to_refresh)
+                if not ok:
+                    logger(logging.WARNING, "Failed to bump updated_at for replicas BEING_DELETED")
+                refresh_start_time = time.time()  # reset it so we can trigger new refresh cycles.
+
             # Physical deletion
             _, _, logger = heartbeat_handler.live(payload=hb_payload)
             stopwatch = Stopwatch()
@@ -228,19 +240,6 @@ def delete_from_storage(heartbeat_handler, hb_payload, replicas, prot, rse_info,
                 # if that assumption is not true, we need to introduce a maximum retry counter to avoid the worker hanging
                 # on individual deletions.
                 num_replicas_processed += 1
-
-                # after each replica is deleted we evaluate how much time we have left to delete.
-                # if we are not able to delete all the replicas we got in, other workers will take the replicas because their update time will
-                # be more than 10 minutes (refer to function list_and_mark_unlocked_replicas).
-                # After 8 minutes, and if we still have some replicas to process, we bump the replicas updated_at field to current time (with will delay the selectability
-                # by other workers by 8+ minutes).
-                elapsed_time = time.time() - refresh_start_time
-                if elapsed_time > trigger_time:  # 8 minutes have passed
-                    to_refresh = replicas[num_replicas_processed + 1]  # only refresh the replicas we have not yet deleted
-                    ok = refresh_replicas(rse_id=rse_id, replicas=to_refresh)
-                    if not ok:
-                        logger(logging.WARNING, "Failed to bump updated_at for replicas BEING_DELETED")
-                    refresh_start_time = time.time()  # reset it so we can trigger new refresh cycles.
 
         if pfns_to_bulk_delete and prot.attributes['scheme'] == 'globus':
             logger(logging.DEBUG, 'Attempting bulk delete on RSE %s for scheme %s', rse_name, prot.attributes['scheme'])

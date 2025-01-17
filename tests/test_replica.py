@@ -313,21 +313,19 @@ class TestReplicaCore:
         files = [{'scope': mock_scope, 'name': did_name_generator('file'), 'bytes': 1, 'adler32': '0cc737eb', 'meta': {'events': 10}} for _ in range(nbfiles)]
         add_replicas(rse_id=rse_id, files=files, account=root_account, ignore_availability=True)
         # adding a repilca will set updated_at time to unix epoch, so we expect is set
-        r = {'scope': files[0]['scope'], 'name': files[0]['name'], 'rse_id': rse_id}
-        original = get_replica_updated_at(r)
-        assert original is not None
+        replica_dict = {'scope': files[0]['scope'], 'name': files[0]['name'], 'rse_id': rse_id}
+        original_timestamp = get_replica_updated_at(replica_dict)
+        assert original_timestamp is not None
 
         # we update the state to BEING_DELETED
-        update_replica_state(rse_id, r['scope'], r['name'], ReplicaState.BEING_DELETED)
-        original = get_replica_updated_at(r)
+        update_replica_state(rse_id, replica_dict['scope'], replica_dict['name'], ReplicaState.BEING_DELETED)
+        original_timestamp = get_replica_updated_at(replica_dict)
 
         time.sleep(2)
-        ok = refresh_replicas(rse_id, [r])
-        assert ok is True
+        assert refresh_replicas(rse_id, [replica_dict])
 
-        got = get_replica_updated_at(r)
-        assert got > original
-
+        got_timestamp = get_replica_updated_at(replica_dict)
+        assert got_timestamp > original_timestamp
 
     def test_touch_replicas(self, rse_factory, mock_scope, root_account):
         """ REPLICA (CORE): Touch replicas accessed_at timestamp"""
