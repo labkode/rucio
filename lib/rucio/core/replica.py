@@ -4512,7 +4512,7 @@ def refresh_replicas(
     :param replicas: a list with replicas (dictionary with the information of the affected replica).
     :param session: The database session in use.
 
-    :returns: True, if successful, False otherwise.
+    :returns: True, if replicas were updated succesfully or no rows to update, False otherwise.
     """
 
     if not replicas or not rse_id:
