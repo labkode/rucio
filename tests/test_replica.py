@@ -330,9 +330,8 @@ class TestReplicaCore:
     def test_refresh_replicas_no_rows(self, rse_factory):
         """REPLICA (CORE): Refresh replicas, no rows"""
         _, rse_id = rse_factory.make_mock_rse()
-        replica_dict = {}
         # when there are no replicas to refresh, True is returned.
-        assert refresh_replicas(rse_id, [replica_dict])
+        assert refresh_replicas(rse_id, [])
 
     def test_touch_replicas(self, rse_factory, mock_scope, root_account):
         """ REPLICA (CORE): Touch replicas accessed_at timestamp"""
