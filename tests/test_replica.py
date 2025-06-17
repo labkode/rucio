@@ -288,6 +288,31 @@ class TestReplicaCore:
 
         assert [f for f in list_files(scope=mock_scope, name=tmp_dsn2)] == []
 
+    def test_refresh_replicas(self, rse_factory, mock_scope, root_account):
+        """REPLICA (CORE): Refresh replicas"""
+        _, rse_id = rse_factory.make_mock_rse()
+        nbfiles = 5
+
+        # add 5 replicas
+        files = [{'scope': mock_scope, 'name': did_name_generator('file'), 'bytes': 1, 'adler32': '0cc737eb', 'meta': {'events': 10}} for _ in range(nbfiles)]
+        add_replicas(rse_id=rse_id, files=files, account=root_account, ignore_availability=True)
+        # adding a replica will set updated_at time to unix epoch, so we expect is set
+        r = {'scope': files[0]['scope'], 'name': files[0]['name'], 'rse_id': rse_id}
+        original = get_replica_updated_at(r)
+        assert original is not None
+
+        # we update the state to BEING_DELETED
+        update_replica_state(rse_id, r['scope'], r['name'], ReplicaState.BEING_DELETED)
+        original = get_replica_updated_at(r)
+
+        time.sleep(2)
+        ok = refresh_replicas(rse_id, [r])
+        assert ok is True
+
+        got = get_replica_updated_at(r)
+        assert got > original
+
+
     def test_touch_replicas(self, rse_factory, mock_scope, root_account):
         """ REPLICA (CORE): Touch replicas accessed_at timestamp"""
 
@@ -820,7 +845,7 @@ def test_client_access_denied_on_delete_replicas(rse_factory, mock_scope, replic
 
 
 def test_client_list_replicas_on_did_without_replicas(rse_factory, did_factory, replica_client, did_client, root_account):
-    """ REPLICA (CLIENT): DIDs of type FILE, but without replicas, must be listed with empty pfns and rses"""
+    """ REPLICA (CLIENT): dids of type FILE, but without replicas, must be listed with empty pfns and rses"""
     rse, _ = rse_factory.make_posix_rse()
     file = did_factory.random_file_did()
     dataset = did_factory.make_dataset()
@@ -842,7 +867,7 @@ def test_client_list_replicas_on_did_without_replicas(rse_factory, did_factory, 
     assert len(replicas) == 1
     assert not replicas[0]['rses']
     assert not replicas[0]['pfns']
-    # TODO: fix listing DIDs without replicas from datasets and containers and uncomment the following 2 asserts
+    # TODO: fix listing dids without replicas from datasets and containers and uncomment the following 2 asserts
     # assert list(replica_client.list_replicas(dids=[dataset]))
     # assert list(replica_client.list_replicas(dids=[container]))
 
