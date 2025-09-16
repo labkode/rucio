@@ -4521,7 +4521,7 @@ def refresh_replicas(
     """
 
     if not replicas or not rse_id:
-            return True
+        return True
     
     tt_mngr = temp_table_mngr(session=session)
     scope_name_temp_table = tt_mngr.create_scope_name_table()
