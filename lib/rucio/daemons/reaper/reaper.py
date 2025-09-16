@@ -135,7 +135,7 @@ def get_rses_to_process(
     return rses_to_process
 
 
-def delete_from_storage(heartbeat_handler, hb_payload, replicas, prot, rse_info, is_staging, auto_exclude_threshold, delay_seconds=600, logger=logging.log):
+def delete_from_storage(heartbeat_handler, hb_payload, replicas, prot, rse_info, is_staging, auto_exclude_threshold, delay_seconds: int = 600, logger=logging.log):
     """
     Delete replicas from storage and manage database cleanup.
 
