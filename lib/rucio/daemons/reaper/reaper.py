@@ -139,21 +139,21 @@ def delete_from_storage(heartbeat_handler, hb_payload, replicas, prot, rse_info,
     """
     Delete replicas from storage and manage database cleanup.
 
-    By default, this function follows the traditional approach where all successfully 
-    deleted replicas are returned to the caller for database cleanup after all 
+    By default, this function follows the traditional approach where all successfully
+    deleted replicas are returned to the caller for database cleanup after all
     physical deletions are complete.
 
-    Optionally, an optimization can be enabled where successfully deleted replicas are 
-    immediately removed from the database in batches during physical deletion. This 
-    reduces database load and prevents race conditions with other workers, but changes 
+    Optionally, an optimization can be enabled where successfully deleted replicas are
+    immediately removed from the database in batches during physical deletion. This
+    reduces database load and prevents race conditions with other workers, but changes
     the traditional flow.
 
-    The immediate cleanup optimization can be enabled using the 'enable_immediate_cleanup' 
+    The immediate cleanup optimization can be enabled using the 'enable_immediate_cleanup'
     parameter in the [reaper] section of rucio.cfg (default: False).
 
     When immediate cleanup is enabled:
     - Immediate batched database cleanup of successfully deleted replicas
-    - Dynamic refresh timing based on delay_seconds parameter  
+    - Dynamic refresh timing based on delay_seconds parameter
     - Race condition prevention through processed replica tracking
     - Configurable batch sizes for different deployment scenarios
 
@@ -167,8 +167,8 @@ def delete_from_storage(heartbeat_handler, hb_payload, replicas, prot, rse_info,
     :param delay_seconds: The delay to query replicas in BEING_DELETED state. Used to calculate refresh trigger time.
     :param logger: Logging function to use
 
-    :returns: List of files that need database cleanup. In traditional mode (default), 
-              this contains all successfully deleted files. In immediate cleanup mode, 
+    :returns: List of files that need database cleanup. In traditional mode (default),
+              this contains all successfully deleted files. In immediate cleanup mode,
               this only contains files that failed immediate cleanup.
     """
     deleted_files = []
