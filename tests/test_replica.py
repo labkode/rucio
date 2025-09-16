@@ -23,23 +23,60 @@ from xml.etree import ElementTree
 
 import pytest
 import xmltodict
-from werkzeug.datastructures import Headers, MultiDict
-
 from rucio.client.ruleclient import RuleClient
 from rucio.common.constants import RseAttr
-from rucio.common.exception import AccessDenied, DatabaseException, DataIdentifierNotFound, InputValidationError, ReplicaIsLocked, ReplicaNotFound, RucioException, ScopeNotFound
+from rucio.common.exception import (
+    AccessDenied,
+    DatabaseException,
+    DataIdentifierNotFound,
+    InputValidationError,
+    ReplicaIsLocked,
+    ReplicaNotFound,
+    RucioException,
+    ScopeNotFound,
+)
 from rucio.common.utils import clean_pfns, generate_uuid, parse_response
 from rucio.core.config import set as cconfig_set
-from rucio.core.did import add_did, attach_dids, get_did, get_did_atime, list_files, set_status
-from rucio.core.replica import add_bad_dids, add_replica, add_replicas, delete_replicas, get_bad_pfns, get_replica, get_replica_atime, get_replicas_state, get_rse_coverage_of_dataset, list_replicas, set_tombstone, touch_replica, update_replica_state, get_replica_updated_at, refresh_replicas
+from rucio.core.did import (
+    add_did,
+    attach_dids,
+    get_did,
+    get_did_atime,
+    list_files,
+    set_status,
+)
+from rucio.core.replica import (
+    add_bad_dids,
+    add_replica,
+    add_replicas,
+    delete_replicas,
+    get_bad_pfns,
+    get_replica,
+    get_replica_atime,
+    get_replica_updated_at,
+    get_replicas_state,
+    get_rse_coverage_of_dataset,
+    list_replicas,
+    refresh_replicas,
+    set_tombstone,
+    touch_replica,
+    update_replica_state,
+)
 from rucio.core.rse import add_protocol, add_rse_attribute, del_rse_attribute
 from rucio.daemons.badreplicas.minos import minos
 from rucio.daemons.badreplicas.minos_temporary_expiration import minos_tu_expiration
 from rucio.db.sqla import models
-from rucio.db.sqla.constants import OBSOLETE, BadPFNStatus, DatabaseOperationType, DIDType, ReplicaState
+from rucio.db.sqla.constants import (
+    OBSOLETE,
+    BadPFNStatus,
+    DatabaseOperationType,
+    DIDType,
+    ReplicaState,
+)
 from rucio.db.sqla.session import db_session
 from rucio.rse import rsemanager as rsemgr
 from rucio.tests.common import Mime, accept, auth, did_name_generator, execute, headers
+from werkzeug.datastructures import Headers, MultiDict
 
 if TYPE_CHECKING:
     from .temp_factories import TemporaryRSEFactory

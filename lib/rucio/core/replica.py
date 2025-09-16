@@ -3204,7 +3204,7 @@ def get_replica_atime(
 
 @read_session
 def get_replica_updated_at(
-    replica: dict[str, Any], 
+    replica: dict[str, Any],
     *,
     session: "Session") -> datetime:
     """
@@ -4505,9 +4505,9 @@ def get_rse_coverage_of_dataset(
 
 @transactional_session
 def refresh_replicas(
-        rse_id: Optional[str] = None, 
+        rse_id: Optional[str] = None,
         replicas: Optional['Iterable[dict[str, Any]]'] = None,
-        *, 
+        *,
         session: "Session"
 ) -> bool:
     """
