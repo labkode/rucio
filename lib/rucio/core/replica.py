@@ -3244,7 +3244,7 @@ def get_replica_updated_at(
     *,
     session: "Session") -> datetime:
     """
-    Get the updated_at timestamp for a replica. Just for testing.
+    Get the updated_at timestamp for a replica.
     :param replica: Dictionary {scope, name, rse_id}
     :param session: Database session to use.
 
