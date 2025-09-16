@@ -139,16 +139,21 @@ def delete_from_storage(heartbeat_handler, hb_payload, replicas, prot, rse_info,
     """
     Delete replicas from storage and manage database cleanup.
 
-    This function implements an optimization where successfully deleted replicas are immediately
-    removed from the database in batches, rather than waiting for all physical deletions to complete.
-    This reduces database load and prevents race conditions with other workers.
+    By default, this function follows the traditional approach where all successfully 
+    deleted replicas are returned to the caller for database cleanup after all 
+    physical deletions are complete.
 
-    The batch size for immediate database cleanup can be configured using the 'db_batch_size'
-    parameter in the [reaper] section of rucio.cfg (default: 50).
+    Optionally, an optimization can be enabled where successfully deleted replicas are 
+    immediately removed from the database in batches during physical deletion. This 
+    reduces database load and prevents race conditions with other workers, but changes 
+    the traditional flow.
 
-    Key optimization features:
+    The immediate cleanup optimization can be enabled using the 'enable_immediate_cleanup' 
+    parameter in the [reaper] section of rucio.cfg (default: False).
+
+    When immediate cleanup is enabled:
     - Immediate batched database cleanup of successfully deleted replicas
-    - Dynamic refresh timing based on delay_seconds parameter
+    - Dynamic refresh timing based on delay_seconds parameter  
     - Race condition prevention through processed replica tracking
     - Configurable batch sizes for different deployment scenarios
 
@@ -162,7 +167,9 @@ def delete_from_storage(heartbeat_handler, hb_payload, replicas, prot, rse_info,
     :param delay_seconds: The delay to query replicas in BEING_DELETED state. Used to calculate refresh trigger time.
     :param logger: Logging function to use
 
-    :returns: List of files that still need database cleanup (due to failed immediate cleanup)
+    :returns: List of files that need database cleanup. In traditional mode (default), 
+              this contains all successfully deleted files. In immediate cleanup mode, 
+              this only contains files that failed immediate cleanup.
     """
     deleted_files = []
     rse_name = rse_info['rse']
@@ -170,14 +177,15 @@ def delete_from_storage(heartbeat_handler, hb_payload, replicas, prot, rse_info,
     noaccess_attempts = 0
     pfns_to_bulk_delete = []
 
-    # Batch configuration for immediate database cleanup
+    # Batch configuration for immediate database cleanup (optional optimization)
+    enable_immediate_cleanup = config_get_bool('reaper', 'enable_immediate_cleanup', default=False, raise_exception=False)
     db_batch_size = config_get_int('reaper', 'db_batch_size', default=50, raise_exception=False)
     pending_db_deletions = []
     processed_replicas = []  # Track replicas that have been processed (successfully or not)
 
     # Debug: Log initial configuration
-    logger(logging.DEBUG, 'Starting deletion for RSE %s with %d replicas, db_batch_size=%d, delay_seconds=%d',
-           rse_name, len(replicas), db_batch_size, delay_seconds)
+    logger(logging.DEBUG, 'Starting deletion for RSE %s with %d replicas, enable_immediate_cleanup=%s, db_batch_size=%d, delay_seconds=%d',
+           rse_name, len(replicas), enable_immediate_cleanup, db_batch_size, delay_seconds)
 
     refresh_start_time = time.time()
     # Calculate trigger time based on delay_seconds. Default to 80% of delay_seconds to provide buffer
@@ -187,13 +195,14 @@ def delete_from_storage(heartbeat_handler, hb_payload, replicas, prot, rse_info,
     logger(logging.DEBUG, 'Refresh trigger time set to %.1f seconds (%.0f%% of delay_seconds=%d)',
            trigger_time, refresh_trigger_ratio * 100, delay_seconds)
 
-    # Validate configuration parameters and log warnings for potential issues
-    if db_batch_size <= 0:
-        logger(logging.WARNING, 'Invalid db_batch_size=%d, using default=50', db_batch_size)
-        db_batch_size = 50
-    elif db_batch_size > len(replicas):
-        logger(logging.DEBUG, 'db_batch_size (%d) larger than replica count (%d) - will clean all at once',
-               db_batch_size, len(replicas))
+    # Validate configuration parameters and log warnings for potential issues (only when immediate cleanup enabled)
+    if enable_immediate_cleanup:
+        if db_batch_size <= 0:
+            logger(logging.WARNING, 'Invalid db_batch_size=%d, using default=50', db_batch_size)
+            db_batch_size = 50
+        elif db_batch_size > len(replicas):
+            logger(logging.DEBUG, 'db_batch_size (%d) larger than replica count (%d) - will clean all at once',
+                   db_batch_size, len(replicas))
 
     if refresh_trigger_ratio <= 0 or refresh_trigger_ratio > 1:
         logger(logging.WARNING, 'Invalid refresh_trigger_ratio=%.2f, using default=0.8', refresh_trigger_ratio)
@@ -230,10 +239,11 @@ def delete_from_storage(heartbeat_handler, hb_payload, replicas, prot, rse_info,
                 if is_staging:
                     logger(logging.WARNING, 'Deletion STAGING of %s:%s as %s on %s, will only delete the catalog and not do physical deletion', replica['scope'], replica['name'], replica['pfn'], rse_name)
                     deleted_files.append({'scope': replica['scope'], 'name': replica['name']})
-                    # Add to pending database deletions for batched cleanup
-                    pending_db_deletions.append({'scope': replica['scope'], 'name': replica['name']})
-                    logger(logging.DEBUG, 'Added staging replica %s:%s to pending_db_deletions (count: %d)',
-                           replica['scope'], replica['name'], len(pending_db_deletions))
+                    # Add to pending database deletions for batched cleanup (only if immediate cleanup enabled)
+                    if enable_immediate_cleanup:
+                        pending_db_deletions.append({'scope': replica['scope'], 'name': replica['name']})
+                        logger(logging.DEBUG, 'Added staging replica %s:%s to pending_db_deletions (count: %d)',
+                               replica['scope'], replica['name'], len(pending_db_deletions))
                     continue
 
                 if replica['pfn']:
@@ -252,10 +262,11 @@ def delete_from_storage(heartbeat_handler, hb_payload, replicas, prot, rse_info,
                 METRICS.timer('delete.{scheme}.{rse}').labels(scheme=prot.attributes['scheme'], rse=rse_name).observe(duration)
 
                 deleted_files.append({'scope': replica['scope'], 'name': replica['name']})
-                # Add to pending database deletions for batched cleanup
-                pending_db_deletions.append({'scope': replica['scope'], 'name': replica['name']})
-                logger(logging.DEBUG, 'Added successfully deleted replica %s:%s to pending_db_deletions (count: %d)',
-                       replica['scope'], replica['name'], len(pending_db_deletions))
+                # Add to pending database deletions for batched cleanup (only if immediate cleanup enabled)
+                if enable_immediate_cleanup:
+                    pending_db_deletions.append({'scope': replica['scope'], 'name': replica['name']})
+                    logger(logging.DEBUG, 'Added successfully deleted replica %s:%s to pending_db_deletions (count: %d)',
+                           replica['scope'], replica['name'], len(pending_db_deletions))
 
                 deletion_dict['duration'] = duration
                 add_message('deletion-done', deletion_dict)
@@ -269,10 +280,11 @@ def delete_from_storage(heartbeat_handler, hb_payload, replicas, prot, rse_info,
                 deletion_dict['duration'] = duration
                 add_message('deletion-not-found', deletion_dict)
                 deleted_files.append({'scope': replica['scope'], 'name': replica['name']})
-                # Add to pending database deletions for batched cleanup
-                pending_db_deletions.append({'scope': replica['scope'], 'name': replica['name']})
-                logger(logging.DEBUG, 'Added NOTFOUND replica %s:%s to pending_db_deletions (count: %d)',
-                       replica['scope'], replica['name'], len(pending_db_deletions))
+                # Add to pending database deletions for batched cleanup (only if immediate cleanup enabled)
+                if enable_immediate_cleanup:
+                    pending_db_deletions.append({'scope': replica['scope'], 'name': replica['name']})
+                    logger(logging.DEBUG, 'Added NOTFOUND replica %s:%s to pending_db_deletions (count: %d)',
+                           replica['scope'], replica['name'], len(pending_db_deletions))
 
             except (ServiceUnavailable, RSEAccessDenied, ResourceTemporaryUnavailable) as error:
                 duration = stopwatch.elapsed
@@ -308,8 +320,8 @@ def delete_from_storage(heartbeat_handler, hb_payload, replicas, prot, rse_info,
                 logger(logging.DEBUG, 'Processed replica %s:%s (%d/%d total), pending_db_deletions=%d',
                        replica['scope'], replica['name'], len(processed_replicas), len(replicas), len(pending_db_deletions))
 
-                # Perform batched database cleanup for successfully deleted files
-                if len(pending_db_deletions) >= db_batch_size:
+                # Perform batched database cleanup for successfully deleted files (only if immediate cleanup enabled)
+                if enable_immediate_cleanup and len(pending_db_deletions) >= db_batch_size:
                     try:
                         logger(logging.DEBUG, 'Triggering immediate cleanup for %d replicas (batch size reached)', len(pending_db_deletions))
                         delete_replicas(rse_id=rse_id, files=pending_db_deletions)
@@ -361,8 +373,8 @@ def delete_from_storage(heartbeat_handler, hb_payload, replicas, prot, rse_info,
                    rse_name, prot.attributes['scheme'], len(pfns_to_bulk_delete))
             prot.bulk_delete(pfns_to_bulk_delete)
 
-        # Clean up any remaining pending database deletions
-        if pending_db_deletions:
+        # Clean up any remaining pending database deletions (only if immediate cleanup enabled)
+        if enable_immediate_cleanup and pending_db_deletions:
             try:
                 logger(logging.DEBUG, 'Final cleanup - deleting %d remaining replicas from database', len(pending_db_deletions))
                 delete_replicas(rse_id=rse_id, files=pending_db_deletions)
@@ -378,8 +390,12 @@ def delete_from_storage(heartbeat_handler, hb_payload, replicas, prot, rse_info,
                 # Keep them in deleted_files so the main loop can handle them
 
         # Debug: Log final optimization statistics
-        logger(logging.DEBUG, 'Deletion complete for RSE %s - processed %d replicas, performed %d immediate cleanups, total immediate cleaned: %d, remaining for main loop: %d',
-               rse_name, len(processed_replicas), immediate_cleanups, total_immediate_cleaned, len(deleted_files))
+        if enable_immediate_cleanup:
+            logger(logging.DEBUG, 'Deletion complete for RSE %s - processed %d replicas, performed %d immediate cleanups, total immediate cleaned: %d, remaining for main loop: %d',
+                   rse_name, len(processed_replicas), immediate_cleanups, total_immediate_cleaned, len(deleted_files))
+        else:
+            logger(logging.DEBUG, 'Deletion complete for RSE %s - processed %d replicas, all %d will be cleaned up by main loop (traditional mode)',
+                   rse_name, len(processed_replicas), len(deleted_files))
 
     except (ServiceUnavailable, RSEAccessDenied, ResourceTemporaryUnavailable) as error:
         for replica in replicas:
@@ -613,10 +629,11 @@ def run_once(
     logger(logging.INFO, 'Reaper started')
 
     # Debug: Log key optimization parameters
+    enable_immediate_cleanup = config_get_bool('reaper', 'enable_immediate_cleanup', default=False, raise_exception=False)
     db_batch_size = config_get_int('reaper', 'db_batch_size', default=50, raise_exception=False)
     refresh_trigger_ratio = config_get_int('reaper', 'refresh_trigger_ratio', default=80, raise_exception=False)
-    logger(logging.DEBUG, 'Optimization configuration - db_batch_size=%d, refresh_trigger_ratio=%d%%, delay_seconds=%d, chunk_size=%d, total_workers=%d',
-           db_batch_size, refresh_trigger_ratio, delay_seconds, chunk_size, total_workers)
+    logger(logging.DEBUG, 'Optimization configuration - enable_immediate_cleanup=%s, db_batch_size=%d, refresh_trigger_ratio=%d%%, delay_seconds=%d, chunk_size=%d, total_workers=%d',
+           enable_immediate_cleanup, db_batch_size, refresh_trigger_ratio, delay_seconds, chunk_size, total_workers)
 
     # try to get auto exclude parameters from the config table. Otherwise use CLI parameters.
     auto_exclude_threshold = config_get_int('reaper', 'auto_exclude_threshold', default=auto_exclude_threshold, raise_exception=False)
