@@ -4545,7 +4545,7 @@ def refresh_replicas(
                 models.RSEFileAssociation.state == ReplicaState.BEING_DELETED)
         )
 
-        total_to_refresh = session.execute(stmt).one()
+        total_to_refresh = session.execute(stmt).scalar_one()
         if total_to_refresh == 0:
             # nothing to do
             return True
