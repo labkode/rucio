@@ -241,7 +241,7 @@ def delete_from_storage(heartbeat_handler, hb_payload, replicas, prot, rse_info,
                 # For STAGING RSEs, no physical deletion
                 if is_staging:
                     logger(logging.WARNING, 'Deletion STAGING of %s:%s as %s on %s, '
-                           'will only delete the catalog and not do physical deletion', 
+                           'will only delete the catalog and not do physical deletion',
                            replica['scope'], replica['name'], replica['pfn'], rse_name)
                     deleted_files.append({'scope': replica['scope'], 'name': replica['name']})
                     # Add to pending database deletions for batched cleanup (only if immediate cleanup enabled)
@@ -293,7 +293,7 @@ def delete_from_storage(heartbeat_handler, hb_payload, replicas, prot, rse_info,
 
             except (ServiceUnavailable, RSEAccessDenied, ResourceTemporaryUnavailable) as error:
                 duration = stopwatch.elapsed
-                logger(logging.WARNING, 'Deletion NOACCESS of %s:%s as %s on %s: %s in %.2f', 
+                logger(logging.WARNING, 'Deletion NOACCESS of %s:%s as %s on %s: %s in %.2f',
                        replica['scope'], replica['name'], replica['pfn'], rse_name, str(error), duration)
                 logger(logging.DEBUG, 'NOACCESS error for replica %s:%s - not added to pending_db_deletions',
                        replica['scope'], replica['name'])
@@ -311,7 +311,7 @@ def delete_from_storage(heartbeat_handler, hb_payload, replicas, prot, rse_info,
 
             except Exception as error:
                 duration = stopwatch.elapsed
-                logger(logging.CRITICAL, 'Deletion CRITICAL of %s:%s as %s on %s in %.2f seconds : %s', 
+                logger(logging.CRITICAL, 'Deletion CRITICAL of %s:%s as %s on %s in %.2f seconds : %s',
                        replica['scope'], replica['name'], replica['pfn'], rse_name, duration, str(traceback.format_exc()))
                 logger(logging.DEBUG, 'CRITICAL error for replica %s:%s - not added to pending_db_deletions',
                        replica['scope'], replica['name'])
@@ -330,7 +330,7 @@ def delete_from_storage(heartbeat_handler, hb_payload, replicas, prot, rse_info,
                 # Perform batched database cleanup for successfully deleted files (only if immediate cleanup enabled)
                 if enable_immediate_cleanup and len(pending_db_deletions) >= db_batch_size:
                     try:
-                        logger(logging.DEBUG, 'Triggering immediate cleanup for %d replicas (batch size reached)', 
+                        logger(logging.DEBUG, 'Triggering immediate cleanup for %d replicas (batch size reached)',
                                len(pending_db_deletions))
                         delete_replicas(rse_id=rse_id, files=pending_db_deletions)
                         immediate_cleanups += 1
@@ -344,7 +344,7 @@ def delete_from_storage(heartbeat_handler, hb_payload, replicas, prot, rse_info,
                         pending_db_deletions.clear()
                     except Exception as db_error:
                         logger(logging.WARNING, 'Failed to immediately delete replicas from database: %s', str(db_error))
-                        logger(logging.DEBUG, 'Keeping %d files in pending_db_deletions for retry in main loop', 
+                        logger(logging.DEBUG, 'Keeping %d files in pending_db_deletions for retry in main loop',
                                len(pending_db_deletions))
                         # Keep the files in pending_db_deletions for retry in the main loop
 
