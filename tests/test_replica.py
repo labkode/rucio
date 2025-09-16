@@ -295,7 +295,7 @@ class TestReplicaCore:
         # add 5 replicas
         files = [{'scope': mock_scope, 'name': did_name_generator('file'), 'bytes': 1, 'adler32': '0cc737eb', 'meta': {'events': 10}} for _ in range(nbfiles)]
         add_replicas(rse_id=rse_id, files=files, account=root_account, ignore_availability=True)
-        # adding a repilca will set updated_at time to unix epoch, so we expect is set
+        # adding a replica will set updated_at time to unix epoch, so we expect is set
         r = {'scope': files[0]['scope'], 'name': files[0]['name'], 'rse_id': rse_id}
         original = get_replica_updated_at(r)
         assert original is not None
