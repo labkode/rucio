@@ -3207,20 +3207,16 @@ def get_replica_atime(
 def get_replica_updated_at(
     replica: dict[str, Any], 
     *,
-    session: "Session"):
+    session: "Session") -> datetime:
     """
     Get the updated_at timestamp for a replica. Just for testing.
-    :param replica: list of dictionary {scope, name, rse_id}
+    :param replica: Dictionary {scope, name, rse_id}
     :param session: Database session to use.
 
     :returns: A datetime timestamp with the updated time.
     """
     stmt = select(
         models.RSEFileAssociation.updated_at
-    ).with_hint(
-        models.RSEFileAssociation,
-        'INDEX(REPLICAS REPLICAS_PK)',
-        'oracle'
     ).where(
         and_(models.RSEFileAssociation.scope == replica['scope'],
              models.RSEFileAssociation.name == replica['name'],
@@ -4509,7 +4505,12 @@ def get_rse_coverage_of_dataset(
 
 
 @transactional_session
-def refresh_replicas(rse_id=None, replicas=None, *, session: "Session"):
+def refresh_replicas(
+        rse_id: Optional[str] = None, 
+        replicas: Optional['Iterable[dict[str, Any]]'] = None,
+        *, 
+        session: "Session"
+) -> bool:
     """
     Updates the updated_at timestamp of the given replicas but don't wait if row is locked.
 
@@ -4564,7 +4565,7 @@ def refresh_replicas(rse_id=None, replicas=None, *, session: "Session"):
             models.RSEFileAssociation.state == ReplicaState.BEING_DELETED,
         ).values({
             models.RSEFileAssociation.updated_at: datetime.utcnow()
-        }).execute_options(
+        }).execution_options(
             synchronize_session=False
         )
 

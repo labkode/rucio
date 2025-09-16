@@ -22,7 +22,7 @@ from urllib.parse import urlparse
 from rucio.common import constants, exception, types, utils
 from rucio.common.checksum import GLOBALLY_SUPPORTED_CHECKSUMS
 from rucio.common.config import config_get_int
-from rucio.common.constants import DEFAULT_VO
+from rucio.common.constants import DEFAULT_VO, RSE_ALL_SUPPORTED_PROTOCOL_OPERATIONS
 from rucio.common.constraints import STRING_TYPES
 from rucio.common.logging import formatted_logger
 from rucio.common.utils import get_transfer_schemas, make_valid_did
