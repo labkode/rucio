@@ -4556,7 +4556,8 @@ def refresh_replicas(
                 '/*+ INDEX(REPLICAS REPLICAS_PK) */', dialect='oracle'
         ).where(
             exists(select(1)
-                    .where(
+                   .select_from(scope_name_temp_table)
+                   .where(
                         and_(models.RSEFileAssociation.scope == scope_name_temp_table.scope,
                             models.RSEFileAssociation.name == scope_name_temp_table.name,
                             models.RSEFileAssociation.rse_id == rse_id)))
