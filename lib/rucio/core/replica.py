@@ -19,7 +19,7 @@ import math
 import random
 from collections import defaultdict, namedtuple
 from curses.ascii import isprint
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from itertools import groupby
 from re import match
@@ -4600,7 +4600,7 @@ def refresh_replicas(
         ).where(
             models.RSEFileAssociation.state == ReplicaState.BEING_DELETED,
         ).values({
-            models.RSEFileAssociation.updated_at: datetime.utcnow()
+            models.RSEFileAssociation.updated_at: datetime.now(timezone.utc)
         }).execution_options(
             synchronize_session=False
         )
