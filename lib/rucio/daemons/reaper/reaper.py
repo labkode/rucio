@@ -862,7 +862,7 @@ def _run_once(
                     logger(logging.DEBUG, 'Main loop cleanup SUCCESS - deleted %d remaining replicas in %.2f seconds', len(deleted_files), time.time() - del_start)
                 else:
                     logger(logging.DEBUG, 'Main loop cleanup - no files remaining, all handled by immediate cleanup optimization')
-                METRICS.counter('deletion.done').inc(len(file_replicas))
+                METRICS.counter('deletion.done').inc(len(deleted_files))
 
                 # Debug: Track cycle metrics
                 cycle_total_replicas_processed += len(file_replicas)
