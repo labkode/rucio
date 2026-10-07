@@ -121,7 +121,10 @@ def has_permission(issuer: "InternalAccount", action: str, kwargs: dict[str, Any
             'export': perm_export,
             'list_transfer_limits': perm_list_transfer_limits,
             'set_transfer_limit': perm_set_transfer_limit,
-            'delete_transfer_limit': perm_delete_transfer_limit}
+            'delete_transfer_limit': perm_delete_transfer_limit,
+            'add_opendata_did': perm_add_opendata_did,
+            'update_opendata_did': perm_update_opendata_did,
+            'delete_opendata_did': perm_delete_opendata_did}
 
     return perm.get(action, perm_default)(issuer=issuer, kwargs=kwargs, session=session)
 
@@ -1127,6 +1130,42 @@ def perm_set_transfer_limit(issuer: "InternalAccount", kwargs: dict[str, Any], s
 def perm_delete_transfer_limit(issuer: "InternalAccount", kwargs: dict[str, Any], session: "Session") -> bool:
     """
     Checks if an account can delete transfer limits.
+
+    :param issuer: Account identifier which issues the command.
+    :param kwargs: List of arguments for the action.
+    :param session: The DB session to use
+    :returns: True if account is allowed, otherwise False
+    """
+    return _is_root(issuer) or has_account_attribute(account=issuer, key='admin', session=session)
+
+
+def perm_add_opendata_did(issuer: "InternalAccount", kwargs: dict[str, Any], session: "Session") -> bool:
+    """
+    Checks if an account can add a DID to the Opendata catalog.
+
+    :param issuer: Account identifier which issues the command.
+    :param kwargs: List of arguments for the action.
+    :param session: The DB session to use
+    :returns: True if account is allowed, otherwise False
+    """
+    return _is_root(issuer) or has_account_attribute(account=issuer, key='admin', session=session)
+
+
+def perm_update_opendata_did(issuer: "InternalAccount", kwargs: dict[str, Any], session: "Session") -> bool:
+    """
+    Checks if an account can update a DID in the Opendata catalog.
+
+    :param issuer: Account identifier which issues the command.
+    :param kwargs: List of arguments for the action.
+    :param session: The DB session to use
+    :returns: True if account is allowed, otherwise False
+    """
+    return _is_root(issuer) or has_account_attribute(account=issuer, key='admin', session=session)
+
+
+def perm_delete_opendata_did(issuer: "InternalAccount", kwargs: dict[str, Any], session: "Session") -> bool:
+    """
+    Checks if an account can delete a DID from the Opendata catalog.
 
     :param issuer: Account identifier which issues the command.
     :param kwargs: List of arguments for the action.

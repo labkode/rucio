@@ -12,9 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
+
 from rucio.common.config import config_get
 from rucio.common.types import InternalScope
 from rucio.core.account import add_account_attribute
+from rucio.core.permission import generic, generic_multi_vo
 from rucio.core.scope import add_scope
 from rucio.db.sqla.constants import DatabaseOperationType
 from rucio.db.sqla.session import db_session
@@ -57,6 +60,17 @@ class TestPermissionCoreGateway:
         with db_session(DatabaseOperationType.WRITE) as session:
             add_account_attribute(random_account, 'scope_admin', True, session=session)
         assert has_permission(issuer=random_account.external, action='add_scope', kwargs={'account': random_account.external}, vo=vo)
+
+    @pytest.mark.parametrize('permission_module', [generic, generic_multi_vo])
+    @pytest.mark.parametrize('action', ['add_opendata_did', 'update_opendata_did', 'delete_opendata_did'])
+    def test_permission_opendata_did(self, root_account, random_account, permission_module, action):
+        """ PERMISSION(CORE): Check permission to add, update and delete Opendata DIDs """
+        kwargs = {'scope': InternalScope('mock', vo=root_account.vo), 'name': 'dataset'}
+        with db_session(DatabaseOperationType.WRITE) as session:
+            assert permission_module.has_permission(root_account, action, kwargs, session=session)
+            assert not permission_module.has_permission(random_account, action, kwargs, session=session)
+            add_account_attribute(random_account, 'admin', True, session=session)
+            assert permission_module.has_permission(random_account, action, kwargs, session=session)
 
     def test_permission_get_auth_token_user_pass(self, vo):
         """ PERMISSION(CORE): Check permission to get_auth_token_user_pass """

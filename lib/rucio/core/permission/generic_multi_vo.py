@@ -118,6 +118,9 @@ def has_permission(issuer, action, kwargs, session: "Session"):
             'del_identity': perm_del_identity,
             'remove_did_from_followed': perm_remove_did_from_followed,
             'remove_dids_from_followed': perm_remove_dids_from_followed,
+            'add_opendata_did': perm_add_opendata_did,
+            'update_opendata_did': perm_update_opendata_did,
+            'delete_opendata_did': perm_delete_opendata_did,
             'add_vo': perm_add_vo,
             'list_vos': perm_list_vos,
             'recover_vo_root_identity': perm_recover_vo_root_identity,
@@ -1081,6 +1084,42 @@ def perm_remove_dids_from_followed(issuer, kwargs, session: "Session"):
     if not kwargs['account'] == issuer:
         return False
     return True
+
+
+def perm_add_opendata_did(issuer: "InternalAccount", kwargs: dict[str, Any], session: "Session") -> bool:
+    """
+    Checks if an account can add a DID to the Opendata catalog.
+
+    :param issuer: Account identifier which issues the command.
+    :param kwargs: List of arguments for the action.
+    :param session: The DB session to use
+    :returns: True if account is allowed, otherwise False
+    """
+    return _is_root(issuer) or has_account_attribute(account=issuer, key='admin', session=session)
+
+
+def perm_update_opendata_did(issuer: "InternalAccount", kwargs: dict[str, Any], session: "Session") -> bool:
+    """
+    Checks if an account can update a DID in the Opendata catalog.
+
+    :param issuer: Account identifier which issues the command.
+    :param kwargs: List of arguments for the action.
+    :param session: The DB session to use
+    :returns: True if account is allowed, otherwise False
+    """
+    return _is_root(issuer) or has_account_attribute(account=issuer, key='admin', session=session)
+
+
+def perm_delete_opendata_did(issuer: "InternalAccount", kwargs: dict[str, Any], session: "Session") -> bool:
+    """
+    Checks if an account can delete a DID from the Opendata catalog.
+
+    :param issuer: Account identifier which issues the command.
+    :param kwargs: List of arguments for the action.
+    :param session: The DB session to use
+    :returns: True if account is allowed, otherwise False
+    """
+    return _is_root(issuer) or has_account_attribute(account=issuer, key='admin', session=session)
 
 
 def perm_add_vo(issuer, kwargs, session: "Session"):
